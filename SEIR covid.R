@@ -27,7 +27,6 @@ SI_int <- function(t.x, t.y, t.z){
   }
   return(int)
 }
-
 SI.int <- function(t.x, t.y, t.z, t1, t2){
   t = sort(c(t.x[t.x>t1 & t.x<t2], t.y[t.y>t1 & t.y<t2], t.z[t.z>t1 & t.z<t2], t1, t2))
   n = length(t) - 1
@@ -47,8 +46,6 @@ SI.int <- function(t.x, t.y, t.z, t1, t2){
   }
   return(int)
 }
-
-
 I_int <- function(t.y, t.z){
   t = sort(c(t.y, t.z, t0, T.end))
   n = length(t) - 1
@@ -65,7 +62,6 @@ I_int <- function(t.y, t.z){
   }
   return(int)
 }
-
 I.int <- function(t.y, t.z, t1, t2){
   t = sort(c(t.y[t.y>t1 & t.y<t2], t.z[t.z>t1 & t.z<t2], t1, t2))
   n = length(t) - 1
@@ -82,8 +78,6 @@ I.int <- function(t.y, t.z, t1, t2){
   }
   return(int)
 }
-
-
 E_int <- function(t.x, t.y){
   t = sort(c(t.x, t.y, t0, T.end))
   n = length(t) - 1
@@ -100,7 +94,6 @@ E_int <- function(t.x, t.y){
   }
   return(int)
 }
-
 E.int <- function(t.x, t.y, t1, t2){
   t = sort(c(t.x[t.x>t1 & t.x<t2], t.y[t.y>t1 & t.y<t2], t1, t2))
   n = length(t) - 1
@@ -117,7 +110,6 @@ E.int <- function(t.x, t.y, t1, t2){
   }
   return(int)
 }
-
 
 
 ## Products (for calculating likelihoods)
@@ -139,7 +131,6 @@ Log.SI_prod <- function(t.x, t.y, t.z){
   }
   return(lp)
 }
-
 Log.I_prod <- function(t.y, t.z){
   times = sort(c(t.y, t.z))
   I = I0
@@ -155,7 +146,6 @@ Log.I_prod <- function(t.y, t.z){
   }
   return(lp)
 }
-
 Log.E_prod <- function(t.x, t.y){
   times = sort(c(t.x, t.y))
   E = E0
@@ -171,8 +161,6 @@ Log.E_prod <- function(t.x, t.y){
   }
   return(lp)
 }
-
-
 Log.SI.prod <- function(t.x, t.y, t.z, t1, t2){
   times = sort(c(t.x[t.x>t1 & t.x<t2], t.y[t.y>t1 & t.y<t2], t.z[t.z>t1 & t.z<t2]))
   S = S0 - sum(t.x<t1)
@@ -191,7 +179,6 @@ Log.SI.prod <- function(t.x, t.y, t.z, t1, t2){
   }
   return(lp)
 }
-
 Log.I.prod <- function(t.y, t.z, t1, t2){
   times = sort(c(t.y[t.y>t1 & t.y<t2], t.z[t.z>t1 & t.z<t2]))
   I = I0 + sum(t.y<t1) - sum(t.z<t1)
@@ -207,7 +194,6 @@ Log.I.prod <- function(t.y, t.z, t1, t2){
   }
   return(lp)
 }
-
 Log.E.prod <- function(t.x, t.y, t1, t2){
   times = sort(c(t.x[t.x>t1 & t.x<t2], t.y[t.y>t1 & t.y<t2]))
   E = E0 + sum(t.x<t1) - sum(t.y<t1)
@@ -223,7 +209,6 @@ Log.E.prod <- function(t.x, t.y, t1, t2){
   }
   return(lp)
 }
-
 Indicator <- function(t.x, t.y, t.z){
   times = sort(c(t.x, t.y, t.z))
   S = S0
@@ -345,7 +330,8 @@ sample.beta1 = c()
 sample.beta2 = c()
 sample.alpha = c()
 sample.gamma = c()
-ptm <- proc.time()
+m = 10
+acc = 0
 for (j in 1:M){
   ## Update parameters
   beta1 = rgamma(1, n.x.1+5, SI.int(t.x.1, t.y, t.z, t0, k)/N+50)
@@ -415,8 +401,6 @@ for (j in 1:M){
   t.z = t.z[2:(n.z+1)]
 
 
-
-  
   
   # Update latent X by new MCMC algorithm
   # valid_proposal = FALSE
@@ -462,72 +446,58 @@ for (j in 1:M){
   
   
   
-  
-  
   ## Update latent X by current MCMC algorithm
-  valid_proposal = FALSE
-  while (valid_proposal == FALSE){
+  tx.new = t.x
+  log_a = 0
+  for (i in 1:m){
     u = runif(1, 0, 1)
     if (u < 1/3){
       # Add one time point
-      nx.new = n.x + 1
-      t.new = runif(1, t0, T.end)
-      tx.new = sort(c(t.new, t.x))
-      move_type = 1
+      tx.new = sort(c(runif(1, t0, T.end), tx.new))
+      log_a = log_a + log(T.end-t0) - log(length(tx.new))
     }else{
       if (u > 2/3){
         # Move one time point
-        nx.new = n.x
-        t.new = runif(1, t0, T.end)
-        tx.new = t.x[-sample(1:n.x, 1)]
-        tx.new = sort(c(t.new, tx.new))
-        move_type = 2
+        tx.new = tx.new[-sample(1:length(tx.new), 1)]
+        tx.new = sort(c(runif(1, t0, T.end), tx.new))
       }else{
         # Remove one time point
-        nx.new = n.x - 1
-        tx.new = t.x[-sample(1:n.x, 1)]
-        move_type = 3
+        tx.new = tx.new[-sample(1:length(tx.new), 1)]
+        log_a = log_a + log(length(tx.new)+1) - log(T.end-t0)
       }
     }
-    valid_proposal = Indicator(tx.new, t.y, t.z)
   }
-  tx1.new = tx.new[tx.new<k]
-  nx1.new = length(tx1.new)
-  tx2.new = tx.new[tx.new>k]
-  nx2.new = length(tx2.new)
-
-  log_p.new = Log.E_prod(tx.new, t.y) - alpha * E_int(tx.new, t.y) +
-    nx1.new*log(beta1/N) + nx2.new*log(beta2/N) + Log.SI_prod(tx.new, t.y, t.z) -
-    beta1/N * SI.int(tx1.new, t.y, t.z, t0, k) - beta2/N * SI.int(tx.new, t.y, t.z, k, T.end)
-
-  log_p.old = Log.E_prod(t.x, t.y) - alpha * E_int(t.x, t.y) +
-    n.x.1*log(beta1/N) + n.x.2*log(beta2/N) + Log.SI_prod(t.x, t.y, t.z) -
-    beta1/N * SI.int(t.x.1, t.y, t.z, t0, k) - beta2/N * SI.int(t.x, t.y, t.z, k, T.end)
-
-  if (move_type == 1){
-    # Add one time point
-    log_p = log_p.new + log(T.end-t0) - (log_p.old + log(n.x+1))
-  }else{
-    if (move_type == 3){
-      # Remove one time point
-      log_p = log_p.new + log(n.x) - (log_p.old + log(T.end-t0))
-    }else{
-      # Move one time point
-      log_p = log_p.new - log_p.old
+  if (Indicator(tx.new, t.y, t.z)){
+    tx1.new = tx.new[tx.new<k]
+    nx1.new = length(tx1.new)
+    tx2.new = tx.new[tx.new>k]
+    nx2.new = length(tx2.new)
+    nx.new = length(tx.new)
+    
+    log_p.new = Log.E_prod(tx.new, t.y) - alpha * E_int(tx.new, t.y) +
+      nx1.new*log(beta1/N) + nx2.new*log(beta2/N) + Log.SI_prod(tx.new, t.y, t.z) -
+      beta1/N * SI.int(tx1.new, t.y, t.z, t0, k) - beta2/N * SI.int(tx.new, t.y, t.z, k, T.end)
+    
+    log_p.old = Log.E_prod(t.x, t.y) - alpha * E_int(t.x, t.y) +
+      n.x.1*log(beta1/N) + n.x.2*log(beta2/N) + Log.SI_prod(t.x, t.y, t.z) -
+      beta1/N * SI.int(t.x.1, t.y, t.z, t0, k) - beta2/N * SI.int(t.x, t.y, t.z, k, T.end)
+    
+    log_a = log_a + log_p.new - log_p.old
+    u = runif(1)
+    if(log(u) < log_a){
+      t.x = tx.new
+      t.x.1 = tx1.new
+      n.x.1 = nx1.new
+      t.x.2 = tx2.new
+      n.x.2 = nx2.new
+      n.x = nx.new
+      acc = acc + 1
     }
   }
-  u = runif(1)
-  if(log(u) < log_p){
-    t.x = tx.new
-    t.x.1 = tx1.new
-    n.x.1 = nx1.new
-    t.x.2 = tx2.new
-    n.x.2 = nx2.new
-    n.x = nx.new
-  }
   sample.nx[j] = n.x
+  print(j)
 }
-proc.time() - ptm
+acc/M
 
 Samples.new = list(nx=sample.nx, beta1=sample.beta1, beta2=sample.beta2, alpha=sample.alpha, gamma=sample.gamma)
 save(Samples.new, file='SEIR_new.RData')
@@ -573,11 +543,11 @@ mean(Samples.new$beta2[200:M])
 mean(Samples.new$alpha[200:M])
 mean(Samples.new$gamma[200:M])
 
-mean(Samples.current$nx[3000:M])
-mean(Samples.current$beta1[3000:M])
-mean(Samples.current$beta2[3000:M])
-mean(Samples.current$alpha[3000:M])
-mean(Samples.current$gamma[3000:M])
+mean(Samples.current$nx[1000:M])
+mean(Samples.current$beta1[1000:M])
+mean(Samples.current$beta2[1000:M])
+mean(Samples.current$alpha[1000:M])
+mean(Samples.current$gamma[1000:M])
 
 ### 3. R0 ###
 library(R0) 
